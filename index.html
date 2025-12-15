@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UML Process Extractor</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        header h1 {
+            font-size: 2.8rem;
+            margin-bottom: 10px;
+            background: linear-gradient(to right, #ff7e5f, #feb47b);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .input-section, .output-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            color: #4a5568;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title i {
+            color: #667eea;
+        }
+
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-family: 'Consolas', 'Monaco', monospace;
+            resize: vertical;
+            transition: border-color 0.3s;
+            margin-bottom: 20px;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .test-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .test-btn {
+            flex: 1;
+            min-width: 120px;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .test-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .test-btn:active {
+            transform: translateY(0);
+        }
+
+        .test-btn:nth-child(2) {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .test-btn:nth-child(3) {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .action-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #ff7e5f 0%, #feb47b 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(255, 126, 95, 0.4);
+        }
+
+        .action-btn:active {
+            transform: translateY(0);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading i {
+            font-size: 2rem;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .result-section {
+            grid-column: 1 / -1;
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .result-content {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .result-card {
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 5px solid #667eea;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .result-card h3 {
+            color: #4a5568;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .result-card h3 i {
+            color: #667eea;
+        }
+
+        #entityHighlighting {
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            line-height: 1.8;
+        }
+
+        .entity {
+            display: inline-block;
+            padding: 4px 8px;
+            margin: 2px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .entity-agent {
+            background-color: #7FDBFF;
+            color: #006064;
+        }
+
+        .entity-task {
+            background-color: #FFDC00;
+            color: #5d4037;
+        }
+
+        .entity-condition {
+            background-color: #FF851B;
+            color: white;
+        }
+
+        .entity-info {
+            background-color: #2ECC40;
+            color: white;
+        }
+
+        .entity-other {
+            background-color: #DDDDDD;
+            color: #666;
+        }
+
+        .plantuml-container {
+            text-align: center;
+        }
+
+        .plantuml-img {
+            max-width: 100%;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-container {
+            height: 500px;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .sankey-container {
+            height: 600px;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .plantuml-url {
+            margin-top: 15px;
+            padding: 10px;
+            background: #e8f4f8;
+            border-radius: 8px;
+            word-break: break-all;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9rem;
+        }
+
+        .plantuml-url a {
+            color: #3182ce;
+            text-decoration: none;
+        }
+
+        .plantuml-url a:hover {
+            text-decoration: underline;
+        }
+
+        footer {
+            text-align: center;
+            color: white;
+            margin-top: 40px;
+            padding: 20px;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .error-message {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .fa-spin {
+            animation: spin 1s linear infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-project-diagram"></i> UML Process Extractor</h1>
+            <p>Transform natural language into BPMN diagrams, entity visualization, and resource flow analysis</p>
+        </header>
+
+        <div class="main-content">
+            <div class="input-section">
+                <h2 class="section-title"><i class="fas fa-keyboard"></i> Input Text</h2>
+                
+                <textarea id="inputText" placeholder="Enter your process description here... Example: The customer submits a refund request, the support agent reviews the request and if the request is valid, the finance department approves the refund..."></textarea>
+                
+                <div class="test-buttons">
+                    <button class="test-btn" onclick="loadTest(1)">
+                        <i class="fas fa-vial"></i> Test 1
+                    </button>
+                    <button class="test-btn" onclick="loadTest(2)">
+                        <i class="fas fa-vial"></i> Test 2
+                    </button>
+                    <button class="test-btn" onclick="loadTest(3)">
+                        <i class="fas fa-vial"></i> Test 3
+                    </button>
+                </div>
+                
+                <button class="action-btn" onclick="processText()">
+                    <i class="fas fa-magic"></i> Extract UML Process
+                </button>
+                
+                <div class="loading" id="loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Processing your text... This may take a few seconds.</p>
+                </div>
+                
+                <div class="error-message" id="errorMessage"></div>
+            </div>
+
+            <div class="output-section">
+                <h2 class="section-title"><i class="fas fa-info-circle"></i> How to Use</h2>
+                <div class="result-card">
+                    <h3><i class="fas fa-lightbulb"></i> Instructions</h3>
+                    <p><strong>1.</strong> Enter a process description in natural language</p>
+                    <p><strong>2.</strong> Use the test buttons for pre-loaded examples</p>
+                    <p><strong>3.</strong> Click "Extract UML Process" to analyze</p>
+                    <p><strong>4.</strong> View the results in the sections below</p>
+                    
+                    <h3 style="margin-top: 20px;"><i class="fas fa-tags"></i> Entity Types</h3>
+                    <p>
+                        <span class="entity entity-agent">AGENT</span>
+                        <span class="entity entity-task">TASK</span>
+                        <span class="entity entity-condition">CONDITION</span>
+                        <span class="entity entity-info">TASK_INFO</span>
+                        <span class="entity entity-other">OTHER</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="result-section">
+            <h2 class="section-title"><i class="fas fa-chart-bar"></i> Results</h2>
+            <div class="result-content" id="results">
+                <!-- Results will be populated here -->
+                <div class="result-card">
+                    <h3><i class="fas fa-search"></i> Output will appear here</h3>
+                    <p>Enter text and click "Extract UML Process" to see the analysis results.</p>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>UML Process Extractor &copy; 2024 | Transform text into visual process diagrams</p>
+        </footer>
+    </div>
+
+    <script>
+        // Test texts
+        const testTexts = {
+            1: `The customer submits a refund request, the support agent reviews the request
+and if the request is valid, the finance department approves the refund, the system processes the payment, the customer receives a confirmation email
+else the support agent informs the customer.`,
+
+            2: `A patient schedules an appointment with the doctor. The receptionist confirms the appointment and sends a reminder.
+During the visit, the doctor examines the patient and prescribes medication if needed. The pharmacy then dispenses the medication.
+Finally, the billing department processes the insurance claim.`,
+
+            3: `An employee submits a vacation request to their manager. The manager reviews the request and checks team availability.
+If approved, HR updates the records and notifies payroll. Otherwise, the manager provides feedback to the employee.
+The system automatically updates the calendar and sends confirmation emails.`
+        };
+
+        function loadTest(num) {
+            document.getElementById('inputText').value = testTexts[num];
+            // Scroll to input
+            document.getElementById('inputText').focus();
+        }
+
+        function processText() {
+            const text = document.getElementById('inputText').value.trim();
+            if (!text) {
+                showError('Please enter some text to analyze.');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('results').innerHTML = `
+                <div class="result-card">
+                    <h3><i class="fas fa-spinner fa-spin"></i> Processing...</h3>
+                    <p>Extracting entities, generating BPMN diagram, and analyzing resource flow...</p>
+                </div>
+            `;
+
+            // Call backend API
+            fetch('/process', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ text: text })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('loading').style.display = 'none';
+                if (data.error) {
+                    showError(data.error);
+                    return;
+                }
+                displayResults(data);
+            })
+            .catch(error => {
+                document.getElementById('loading').style.display = 'none';
+                showError('An error occurred while processing the text. Please try again.');
+                console.error('Error:', error);
+            });
+        }
+
+        function displayResults(data) {
+            let resultsHTML = `
+                <!-- ENTITY HIGHLIGHTING -->
+                <div class="result-card">
+                    <h3><i class="fas fa-highlighter"></i> Entity Highlighting</h3>
+                    <div id="entityHighlighting">${data.entity_html || 'No entities found'}</div>
+                </div>
+
+                <!-- PLANTUML BPMN -->
+                <div class="result-card">
+                    <h3><i class="fas fa-project-diagram"></i> PlantUML BPMN Diagram</h3>
+                    <div class="plantuml-container">
+                        ${data.plantuml_url ? `<img src="${data.plantuml_url}" alt="BPMN Diagram" class="plantuml-img">` : 'No diagram generated'}
+                    </div>
+                    ${data.plantuml_url ? `
+                    <div class="plantuml-url">
+                        <strong>Diagram URL:</strong><br>
+                        <a href="${data.plantuml_url}" target="_blank">${data.plantuml_url}</a>
+                    </div>
+                    ` : ''}
+                </div>
+
+                <!-- INTERACTION MATRIX + HEATMAP -->
+                <div class="result-card">
+                    <h3><i class="fas fa-th"></i> Interaction Matrix & Heatmap</h3>
+                    ${data.agents ? `<p><strong>Agents:</strong> ${data.agents.join(', ')}</p>` : ''}
+                    <div id="heatmapChart" class="chart-container"></div>
+                </div>
+
+                <!-- SANKEY DIAGRAM -->
+                <div class="result-card">
+                    <h3><i class="fas fa-stream"></i> Resource Flow (Sankey Diagram)</h3>
+                    <div id="sankeyChart" class="sankey-container"></div>
+                </div>
+
+                <!-- RAW DATA -->
+                <div class="result-card">
+                    <h3><i class="fas fa-code"></i> Raw Data</h3>
+                    <details>
+                        <summary>Click to view raw extracted data</summary>
+                        <pre style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin-top: 10px; overflow: auto; max-height: 400px;">
+${JSON.stringify(data, null, 2)}
+                        </pre>
+                    </details>
+                </div>
+            `;
+
+            document.getElementById('results').innerHTML = resultsHTML;
+
+            // Render heatmap if data available
+            if (data.matrix && data.agents) {
+                renderHeatmap(data.agents, data.matrix);
+            }
+
+            // Render sankey if data available
+            if (data.sankey_sources && data.sankey_targets && data.sankey_values && data.agents) {
+                renderSankey(data.agents, data.sankey_sources, data.sankey_targets, data.sankey_values);
+            }
+        }
+
+        function renderHeatmap(agents, matrix) {
+            const data = [{
+                z: matrix,
+                x: agents,
+                y: agents,
+                type: 'heatmap',
+                colorscale: 'Viridis',
+                showscale: true,
+                hoverongaps: false
+            }];
+
+            const layout = {
+                title: 'Agent Interaction Heatmap',
+                xaxis: { title: 'To Agent' },
+                yaxis: { title: 'From Agent' },
+                width: document.getElementById('heatmapChart').offsetWidth,
+                height: 500,
+                margin: { t: 50, r: 30, b: 80, l: 80 }
+            };
+
+            Plotly.newPlot('heatmapChart', data, layout);
+        }
+
+        function renderSankey(agents, sources, targets, values) {
+            const data = {
+                type: "sankey",
+                orientation: "h",
+                node: {
+                    pad: 15,
+                    thickness: 30,
+                    line: {
+                        color: "black",
+                        width: 0.5
+                    },
+                    label: agents,
+                    color: agents.map((_, i) => `hsl(${i * 360 / agents.length}, 70%, 50%)`)
+                },
+                link: {
+                    source: sources,
+                    target: targets,
+                    value: values,
+                    color: sources.map(i => `rgba(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, 0.4)`)
+                }
+            };
+
+            const layout = {
+                title: "Resource Flow Sankey Diagram",
+                font: { size: 12 },
+                width: document.getElementById('sankeyChart').offsetWidth,
+                height: 600,
+                margin: { t: 50, r: 30, b: 30, l: 30 }
+            };
+
+            Plotly.newPlot('sankeyChart', [data], layout);
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // Load first test by default
+        window.onload = function() {
+            loadTest(1);
+        };
+    </script>
+</body>
+</html>
