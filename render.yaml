@@ -2,7 +2,7 @@ services:
   - type: web
     name: uml-process-extractor
     env: python
-    pythonVersion: "3.9.16"  # ⭐ ЯВНО указываем версию
+    pythonVersion: "3.9.16"
     buildCommand: "pip install --upgrade pip && pip install -r requirements.txt"
     startCommand: "gunicorn app:app"
     envVars:
